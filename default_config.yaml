@@ -1,0 +1,24 @@
+# Hindsight plugin configuration defaults
+# Connection settings are stored in secrets (HINDSIGHT_BASE_URL, HINDSIGHT_API_KEY)
+
+# Bank ID prefix - combined with project/agent context for isolation
+hindsight_bank_prefix: "a0"
+
+# Enable/disable individual Hindsight operations
+hindsight_retain_enabled: true
+hindsight_recall_enabled: true
+hindsight_reflect_enabled: true
+
+# Recall settings
+hindsight_recall_max_tokens: 4096
+hindsight_recall_budget: "mid"
+
+# Reflect settings
+hindsight_reflect_budget: "low"
+hindsight_reflect_max_tokens: 500
+
+# Cache TTL for reflect context (seconds)
+hindsight_cache_ttl: 120
+
+# Debug logging
+hindsight_debug: false

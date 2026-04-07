@@ -1,0 +1,12 @@
+name: hindsight
+title: Hindsight Memory
+description: >-
+  Augments Agent Zero's memory with Hindsight (vectorize.io).
+  Automatically retains conversation memories to Hindsight banks,
+  enriches recall with semantic search, and injects disposition-aware
+  context via reflect. Requires a running Hindsight server.
+version: 1.0.0
+settings_sections:
+  - agent
+per_project_config: true
+per_agent_config: false
