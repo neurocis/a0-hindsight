@@ -1,6 +1,6 @@
 title: Hindsight Memory
 description: Augments Agent Zero's memory with Hindsight semantic search and disposition-aware context generation.
-github: https://github.com/neurocis/A0-Hindsight
+github: https://github.com/neurocis/a0-hindsight
 tags:
   - memory
   - semantic
