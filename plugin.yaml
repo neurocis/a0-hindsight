@@ -1,4 +1,4 @@
-name: hindsight
+name: a0-hindsight
 title: Hindsight Memory
 description: >-
   Augments Agent Zero's memory with Hindsight (vectorize.io).
