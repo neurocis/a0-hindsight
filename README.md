@@ -130,6 +130,67 @@ hindsight/
 | Cache TTL | `120` seconds | How long to cache reflect context |
 | Debug Logging | `false` | Verbose logging |
 
+## Hindsight Companion Skill (Optional CLI Access)
+
+While the Hindsight plugin handles automatic lifecycle operations (retain, recall, reflect), you can also use the **Hindsight companion skill** for direct, opt-in CLI-style access to memory banks.
+
+### Loading the Skill
+
+```bash
+skills_tool:load hindsight
+```
+
+Once loaded, the skill provides:
+
+| Operation | Purpose |
+|-----------|----------|
+| **Retain** | Manually store information to a memory bank |
+| **Recall** | Manually search memories by query |
+| **Reflect** | Manually generate disposition-aware context |
+| **Inspect** | View memory bank contents and metadata |
+| **List** | List all memories in a bank |
+| **Export** | Export memories to file |
+| **Delete** | Remove specific memories |
+
+### When to Use the Skill
+
+- **Plugin alone**: Automatic background operation (good for hands-off memory management)
+- **Plugin + Skill**: Manual intervention when you need to:
+  - Query specific memories outside normal conversation flow
+  - Consolidate or reorganize memory banks
+  - Export memory data for inspection
+  - Troubleshoot or debug Hindsight service issues
+  - Trigger memory operations explicitly within agent workflows
+
+### Architecture
+
+The plugin and skill form a complementary pair:
+
+```
+┌─────────────────────────────────────┐
+│  Plugin (Automatic Lifecycle)       │
+├─────────────────────────────────────┤
+│ • Retain after each conversation   │
+│ • Recall during memory phase       │
+│ • Reflect into system prompt       │
+│ • Runs invisibly in background     │
+└─────────────────────────────────────┘
+         ↓         ↑
+  Hindsight Server
+         ↑         ↓
+┌─────────────────────────────────────┐
+│  Skill (Manual CLI Access)          │
+├─────────────────────────────────────┤
+│ • Query memories on demand         │
+│ • Manage memory banks explicitly   │
+│ • Export and analyze data          │
+│ • Requires explicit load command   │
+└─────────────────────────────────────┘
+```
+
+Both use the same Hindsight server and bank infrastructure—the plugin provides automatic operation, the skill provides manual control.
+
+
 ## Hindsight Concepts
 
 | Concept | Description |
