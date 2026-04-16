@@ -59,9 +59,9 @@ Or use the Vectorize.io hosted service.
 
 ### 4. Configure in Agent Zero
 
-1. Go to **Settings → Secrets** and add:
-   - `HINDSIGHT_BASE_URL` — your Hindsight server URL (e.g. `http://localhost:8888`)
-   - `HINDSIGHT_API_KEY` — (optional) API key if required by your server
+1. Go to **Settings → Agents → Hindsight Memory** and set:
+   - `Hindsight Base URL` — your Hindsight server URL (optional; e.g. `http://localhost:8888`)
+   - `HINDSIGHT_API_KEY` — (optional) API key if required by your server (in **Settings → Secrets**)
 
 2. Go to **Settings → Plugins** and enable **Hindsight Memory**
 
@@ -112,9 +112,10 @@ hindsight/
 
 | Key | Required | Default | Description |
 |-----|----------|---------|-------------|
-| `HINDSIGHT_BASE_URL` | ✅ Yes | — | Hindsight server URL (e.g. `http://localhost:8888`) |
+| `HINDSIGHT_BASE_URL` | No* | — | Hindsight server URL (e.g. `http://localhost:8888`). Set in plugin settings instead. |
 | `HINDSIGHT_API_KEY` | No | — | API key (optional for local servers) |
 
+*Note: `HINDSIGHT_BASE_URL` is configured in the plugin settings UI. Setting it in Secrets is deprecated but still supported for backwards compatibility.
 ### Plugin Settings (Settings → Plugins → Hindsight → Configure)
 
 | Setting | Default | Description |
