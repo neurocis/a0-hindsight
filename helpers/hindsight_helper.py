@@ -10,7 +10,7 @@ extensions run inside an async event loop.
 
 import os
 import time
-
+from typing import Optional, Dict, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from agent import AgentContext
 

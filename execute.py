@@ -36,28 +36,22 @@ def main():
 
     # --- Step 3: Check configuration ---
     print("[3/3] Checking configuration...")
-    try:
-        from helpers.secrets import get_secrets_manager
-        secrets_mgr = get_secrets_manager(None)
-        secrets = secrets_mgr.load_secrets()
+    import os
+    
+    base_url = os.environ.get("HINDSIGHT_BASE_URL", "").strip()
+    if base_url:
+        print(f"  ✓ HINDSIGHT_BASE_URL found: {base_url}")
+    else:
+        print("  ⚠ HINDSIGHT_BASE_URL not set.")
+        print("    Set it as an environment variable before starting Agent Zero.")
+        print("    Example: export HINDSIGHT_BASE_URL='http://localhost:8888'")
 
-        base_url = secrets.get("HINDSIGHT_BASE_URL", "").strip()
-        if base_url:
-            print(f"  ✓ HINDSIGHT_BASE_URL found: {base_url}")
-        else:
-            print("  ⚠ HINDSIGHT_BASE_URL not set. Add it in Settings → Secrets.")
-            print("    Example: http://localhost:8888")
-
-        api_key = secrets.get("HINDSIGHT_API_KEY", "").strip()
-        if api_key:
-            masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
-            print(f"  ✓ HINDSIGHT_API_KEY found: {masked}")
-        else:
-            print("  ℹ HINDSIGHT_API_KEY not set (optional for local Hindsight servers).")
-
-    except Exception as e:
-        print(f"  ⚠ Could not check secrets: {e}")
-        print("    Add HINDSIGHT_BASE_URL in Settings → Secrets.")
+    api_key = os.environ.get("HINDSIGHT_API_KEY", "").strip()
+    if api_key:
+        masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
+        print(f"  ✓ HINDSIGHT_API_KEY found: {masked}")
+    else:
+        print("  ℹ HINDSIGHT_API_KEY not set (optional for local Hindsight servers).")
 
     # --- Step 4: Test connectivity ---
     if base_url:
