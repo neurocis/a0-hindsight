@@ -77,13 +77,30 @@ def _get_secret(key: str, default: str = "", context: Optional["AgentContext"] =
         return default
 
 
-def get_base_url(context: Optional["AgentContext"] = None) -> Optional[str]:
-    """Retrieve HINDSIGHT_BASE_URL from environment variable.
+def get_base_url(context: Optional["AgentContext"] = None, agent: Any = None) -> Optional[str]:
+    """Retrieve HINDSIGHT_BASE_URL with fallback chain.
     
-    Reads from os.environ.get("HINDSIGHT_BASE_URL") for non-sensitive configuration.
+    Priority order:
+    1. Environment variable HINDSIGHT_BASE_URL (recommended)
+    2. Plugin config hindsight_base_url (legacy, for migration)
+    3. None if neither is set
     """
+    # First: check environment variable (recommended)
     url = os.environ.get("HINDSIGHT_BASE_URL", "").strip()
-    return url if url else None
+    if url:
+        return url
+    
+    # Second: fallback to plugin config (for migration compatibility)
+    try:
+        config = _get_plugin_config(agent)
+        url = config.get("hindsight_base_url", "").strip()
+        if url:
+            _log(context, "Using HINDSIGHT_BASE_URL from plugin config (legacy). Consider using environment variable instead.", "warning")
+            return url
+    except Exception as e:
+        _log(context, f"Error reading plugin config: {e}", "debug")
+    
+    return None
 
 
 def get_api_key(context: Optional["AgentContext"] = None) -> Optional[str]:
