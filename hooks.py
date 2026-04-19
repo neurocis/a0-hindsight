@@ -4,6 +4,7 @@ Hindsight Plugin — Framework Lifecycle Hooks
 Called automatically by the Agent Zero plugin system:
 - install()      : after plugin is placed in usr/plugins/
 - pre_update()   : before plugin code is updated in place
+- uninstall()    : before plugin directory is deleted
 """
 
 import subprocess
@@ -26,6 +27,19 @@ def install():
     print(f"[Hindsight] Installed {_PACKAGE} successfully.")
 
 
+
+def uninstall():
+    """Clean up Hindsight SDK dependency before plugin removal."""
+    print("[Hindsight] Uninstalling dependencies...")
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "uninstall", "-y", "hindsight-client"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(f"[Hindsight] pip uninstall warning:\n{result.stderr}")
+    else:
+        print("[Hindsight] Uninstalled hindsight-client successfully.")
 def pre_update():
     """Re-install dependencies before an update (ensures compatibility)."""
     install()

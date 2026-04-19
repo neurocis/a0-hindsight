@@ -18,8 +18,22 @@ try:
     from hindsight_client import Hindsight
     HINDSIGHT_AVAILABLE = True
 except ImportError:
-    HINDSIGHT_AVAILABLE = False
-    Hindsight = None  # type: ignore[assignment,misc]
+    # Auto-install: if install() hook wasn't called (manual placement),
+    # pip install the dependency so extensions don't silently fail.
+    import subprocess
+    import sys
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "hindsight-client>=0.4.0"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        from hindsight_client import Hindsight
+        HINDSIGHT_AVAILABLE = True
+    except Exception:
+        HINDSIGHT_AVAILABLE = False
+        Hindsight = None  # type: ignore[assignment,misc]
 
 # Module-level caches
 _client_cache: Dict[str, Any] = {}
