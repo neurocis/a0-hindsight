@@ -6,6 +6,7 @@ also retains them to Hindsight for semantic enrichment.
 Runs at priority _52 (after _50_memorize_fragments and _51_memorize_solutions).
 """
 
+import asyncio
 from helpers import errors, plugins
 from helpers.extension import Extension
 from helpers.dirty_json import DirtyJson
@@ -39,8 +40,26 @@ class HindsightRetain(Extension):
 
         # Run retain in background to avoid blocking the agent loop
         task = DeferredTask(thread_name=THREAD_BACKGROUND)
-        task.start_task(self.retain_to_hindsight, loop_data, log_item)
-
+        task.start_task(self._retain_wrapper, loop_data, log_item)
+    
+    def _retain_wrapper(self, loop_data: LoopData, log_item):
+        """Wrapper to run async retain_to_hindsight in a new event loop."""
+        try:
+            # Create a new event loop for this background thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(self.retain_to_hindsight(loop_data, log_item))
+            finally:
+                loop.close()
+        except Exception as e:
+            err = errors.format_error(e)
+            if self.agent:
+                self.agent.context.log.log(
+                    type="warning",
+                    heading="Hindsight retain wrapper error",
+                    content=err,
+                )
     async def retain_to_hindsight(self, loop_data: LoopData, log_item, **kwargs):
         if not self.agent:
             return
