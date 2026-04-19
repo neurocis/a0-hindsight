@@ -27,6 +27,7 @@ _reflect_cache: Dict[str, tuple] = {}  # bank_id -> (timestamp, content)
 
 # Default configuration values
 _DEFAULTS: Dict[str, Any] = {
+    "hindsight_bank_id": "",  # Explicit bank ID override; empty = use derived format (prefix-projectname)
     "hindsight_bank_prefix": "a0",
     "hindsight_retain_enabled": True,
     "hindsight_recall_enabled": True,

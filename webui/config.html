@@ -32,6 +32,20 @@
 
                 <div class="field">
                     <div class="field-label">
+                        <div class="field-title">Explicit Bank ID (Optional Override)</div>
+                        <div class="field-description">
+                            Leave blank to auto-derive bank ID from prefix + project name.
+                            Set to a specific name (e.g., "Agent0") to use that bank instead of derived format.
+                        </div>
+                    </div>
+                    <div class="field-control">
+                        <input type="text"
+                               x-model="config.hindsight_bank_id"
+                               placeholder="Leave blank for auto-derivation" />
+                    </div>
+
+                <div class="field">
+                    <div class="field-label">
                         <div class="field-title">Hindsight Base URL</div>
                         <div class="field-description">
                             The URL where your Hindsight server is running (optional).

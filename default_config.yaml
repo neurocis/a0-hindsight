@@ -1,8 +1,12 @@
 # Hindsight plugin configuration defaults
 # Connection settings are stored in secrets (HINDSIGHT_BASE_URL, HINDSIGHT_API_KEY)
 
-# Bank ID prefix - combined with project/agent context for isolation
-hindsight_bank_prefix: "a0"
+# Bank ID settings
+# hindsight_bank_id - Explicit override for bank name (if set, takes priority over prefix-based derivation)
+# Leave blank/empty to use auto-derived ID format: prefix-projectname
+hindsight_bank_id: ""
+
+# Bank ID prefix - combined with project/agent context for isolation (used when hindsight_bank_id is empty)
 
 # Enable/disable individual Hindsight operations
 hindsight_retain_enabled: true
