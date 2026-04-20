@@ -125,9 +125,10 @@ def _get_plugin_config(agent: Any) -> Dict[str, Any]:
             if os.path.isfile(config_path):
                 with open(config_path, "r") as f:
                     file_config = json.load(f)
-                # Merge: file values fill in gaps, don't overwrite framework values
+                # Merge: file values only fill truly missing keys
+                # (not False booleans, which are valid user choices)
                 for k, v in file_config.items():
-                    if k not in config or not config[k]:
+                    if k not in config:
                         config[k] = v
         except Exception as e:
             print(f"[HINDSIGHT DEBUG] _get_plugin_config() config.json fallback failed: {e}")
