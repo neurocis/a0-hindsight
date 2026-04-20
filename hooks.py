@@ -65,7 +65,7 @@ def install():
     else:
         PrintStyle.info("a0_hindsight: installing hindsight_client...")
         result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--quiet", _PACKAGE],
+            [sys.executable, "-m", "pip", "install", "--quiet", "--target", os.path.join(PLUGIN_DIR, "vendor"), _PACKAGE],
             capture_output=True,
             text=True,
             timeout=60,

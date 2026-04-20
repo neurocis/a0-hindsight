@@ -7,12 +7,21 @@ recall, and reflect operations for persistent memory augmentation.
 Uses async variants (aretain, arecall, areflect) since Agent Zero
 extensions run inside an async event loop.
 """
-
 import os
+import sys
 import time
 from typing import Optional, Dict, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from agent import AgentContext
+
+# Add vendor directory to sys.path BEFORE importing hindsight_client
+# This allows the plugin to use hindsight-client from its own vendor/
+# directory instead of relying on system-wide pip installation (which is
+# ephemeral in Docker and lost on container restart).
+plugin_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+vendor_dir = os.path.join(plugin_dir, "vendor")
+if vendor_dir not in sys.path:
+    sys.path.insert(0, vendor_dir)
 
 try:
     from hindsight_client import Hindsight

@@ -8,3 +8,4 @@ build/
 *.egg
 .env
 execute_record.json
+vendor/
