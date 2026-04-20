@@ -4,6 +4,13 @@ After the core memory plugin memorizes fragments, this extension
 also retains them to Hindsight for semantic enrichment.
 
 Runs at priority _52 (after _50_memorize_fragments and _51_memorize_solutions).
+
+Uses asyncio.create_task() instead of DeferredTask to avoid
+'Timeout context manager should be used inside a task' errors.
+DeferredTask creates a separate background event loop thread,
+which causes asyncio.timeout() (used internally by httpx/aiohttp
+in Python 3.11+) to fail because the HTTP client sessions and
+asyncio timeout contexts are bound to the main loop.
 """
 
 import asyncio
@@ -13,7 +20,6 @@ from helpers import errors, plugins
 from helpers.extension import Extension
 from helpers.dirty_json import DirtyJson
 from agent import LoopData
-from helpers.defer import DeferredTask, THREAD_BACKGROUND
 
 # Fix import path for hindsight plugin helpers
 # Add /a0 to sys.path so that 'usr.plugins.a0_hindsight' can be resolved
@@ -26,40 +32,44 @@ from usr.plugins.a0_hindsight.helpers import hindsight_helper
 class HindsightRetain(Extension):
 
     async def execute(self, loop_data: LoopData = LoopData(), **kwargs):
-        print("[HINDSIGHT RETAIN] _52_hindsight_retain.execute() called")
         if not self.agent:
-            print("[HINDSIGHT RETAIN] No agent - returning")
             return
 
         context = self.agent.context
         if not hasattr(context, "agent0"):
-            print("[HINDSIGHT RETAIN] No agent0 on context - returning")
             return
         # Check if hindsight_client is available before proceeding
         if not hindsight_helper.is_hindsight_client_available():
-            print("[HINDSIGHT RETAIN] hindsight_client not available - returning")
             return
 
         if not hindsight_helper.is_configured(context):
-            print("[HINDSIGHT RETAIN] Not configured - returning")
             return
 
         config = hindsight_helper._get_plugin_config(self.agent)
-        print(f"[HINDSIGHT RETAIN] Config resolved: base_url={config.get('hindsight_base_url','?')}, retain_enabled={config.get('hindsight_retain_enabled')}")
         if not config.get("hindsight_retain_enabled", True):
-            print("[HINDSIGHT RETAIN] Retain disabled in config - returning")
             return
 
-        # Run retention in background to avoid blocking
-        # Create DeferredTask and start the async background task
-        task = DeferredTask()
-        task.start_task(
-            self._retain_to_hindsight,
-            self.agent,
-            context,
-            loop_data,
-            config,
-        )
+        # Run retention as a fire-and-forget task on the SAME event loop.
+        # Using asyncio.create_task() instead of DeferredTask because:
+        # - DeferredTask creates a separate background event loop thread
+        # - The LLM client (httpx) and Hindsight SDK (aiohttp) use
+        #   asyncio.timeout() internally, which requires being inside a
+        #   proper asyncio Task on the current running loop
+        # - Running on a different loop causes:
+        #   'Timeout context manager should be used inside a task'
+        try:
+            asyncio.create_task(
+                self._retain_to_hindsight(
+                    self.agent,
+                    context,
+                    loop_data,
+                    config,
+                )
+            )
+        except RuntimeError:
+            # No running event loop - should not happen in extension context,
+            # but handle gracefully
+            pass
 
     @staticmethod
     async def _retain_to_hindsight(agent, context, loop_data, config):
