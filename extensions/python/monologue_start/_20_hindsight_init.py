@@ -6,10 +6,17 @@ Also performs auto-install of missing dependencies on first run.
 
 import subprocess
 import sys
+import os
 from agent import AgentContext
 from helpers.extension import Extension
-from usr.plugins.a0_hindsight.helpers import hindsight_helper
 
+# Fix import path for hindsight plugin helpers
+# Add /a0 to sys.path so that 'usr.plugins.a0_hindsight' can be resolved
+plugin_base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+if plugin_base not in sys.path:
+    sys.path.insert(0, plugin_base)
+
+from usr.plugins.a0_hindsight.helpers import hindsight_helper
 
 class HindsightInit(Extension):
 

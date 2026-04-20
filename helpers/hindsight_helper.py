@@ -95,12 +95,42 @@ def _log(context: Optional["AgentContext"], msg: str, log_type: str = "info") ->
 
 
 def _get_plugin_config(agent: Any) -> Dict[str, Any]:
-    """Read plugin settings from A0's config system with fallbacks."""
-    try:
-        from helpers.plugins import get_plugin_config
-        config = get_plugin_config("a0_hindsight", agent=agent) or {}
-    except Exception:
-        config = {}
+    """Read plugin settings from A0's config system with fallbacks.
+    
+    Priority:
+    1. A0 framework get_plugin_config() (resolves project/agent scope)
+    2. Direct config.json file read (Docker-safe fallback when agent=None or framework unavailable)
+    3. _DEFAULTS only
+    """
+    config = {}
+    
+    # Try A0 framework config API first (requires valid agent reference)
+    if agent is not None:
+        try:
+            from helpers.plugins import get_plugin_config
+            config = get_plugin_config("a0_hindsight", agent=agent) or {}
+        except Exception as e:
+            import traceback
+            print(f"[HINDSIGHT DEBUG] _get_plugin_config() framework API failed: {type(e).__name__}: {e}")
+            config = {}
+    
+    # Fallback: read config.json directly from plugin directory (Docker-persistent)
+    if not config or not config.get("hindsight_base_url"):
+        try:
+            import json
+            config_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "config.json"
+            )
+            if os.path.isfile(config_path):
+                with open(config_path, "r") as f:
+                    file_config = json.load(f)
+                # Merge: file values fill in gaps, don't overwrite framework values
+                for k, v in file_config.items():
+                    if k not in config or not config[k]:
+                        config[k] = v
+        except Exception as e:
+            print(f"[HINDSIGHT DEBUG] _get_plugin_config() config.json fallback failed: {e}")
 
     for key, default in _DEFAULTS.items():
         if key not in config:
@@ -165,6 +195,7 @@ def is_hindsight_client_available() -> bool:
 def _get_timestamp() -> str:
     """Return current timestamp in ISO format."""
     from datetime import datetime
+    return datetime.now().isoformat()
 
 
 def _update_status_file_success(context: Optional["AgentContext"] = None) -> None:
@@ -251,8 +282,10 @@ def get_client(context: Optional["AgentContext"] = None) -> Optional[Any]:
     if not HINDSIGHT_AVAILABLE:
         return None
 
-    base_url = get_base_url(context)
+    agent = getattr(context, "agent0", None) if context else None
+    base_url = get_base_url(context, agent)
     if not base_url:
+        print(f"[HINDSIGHT DEBUG] get_client(): base_url is None. agent={agent is not None}, env={bool(os.environ.get('HINDSIGHT_BASE_URL'))}")
         return None
 
     api_key = get_api_key(context)
@@ -283,7 +316,7 @@ def get_bank_id(context: "AgentContext") -> str:
     NEW: if hindsight_bank_id is explicitly set in config, use that instead.
     """
     agent0 = getattr(context, "agent0", None)
-    config = _get_plugin_config(agent0) if agent0 else {}
+    config = _get_plugin_config(agent0)
     
     # Explicit override takes priority
     explicit_id = config.get("hindsight_bank_id", "").strip()
@@ -311,7 +344,7 @@ async def retain_memory(context: "AgentContext", content: str, metadata: Optiona
         return False
 
     agent0 = getattr(context, "agent0", None)
-    config = _get_plugin_config(agent0) if agent0 else {}
+    config = _get_plugin_config(agent0)
     if not config.get("hindsight_retain_enabled", True):
         return False
 
@@ -345,7 +378,7 @@ async def recall_memories(context: "AgentContext", query: str) -> Optional[str]:
         return None
 
     agent0 = getattr(context, "agent0", None)
-    config = _get_plugin_config(agent0) if agent0 else {}
+    config = _get_plugin_config(agent0)
     if not config.get("hindsight_recall_enabled", True):
         return None
 
@@ -404,7 +437,7 @@ async def reflect_context(context: "AgentContext", query: str) -> Optional[str]:
         return None
 
     agent0 = getattr(context, "agent0", None)
-    config = _get_plugin_config(agent0) if agent0 else {}
+    config = _get_plugin_config(agent0)
     if not config.get("hindsight_reflect_enabled", True):
         return None
 

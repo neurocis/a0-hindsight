@@ -7,44 +7,58 @@ Runs at priority _52 (after _50_memorize_fragments and _51_memorize_solutions).
 """
 
 import asyncio
+import os
+import sys
 from helpers import errors, plugins
 from helpers.extension import Extension
 from helpers.dirty_json import DirtyJson
 from agent import LoopData
 from helpers.defer import DeferredTask, THREAD_BACKGROUND
 
-from usr.plugins.a0_hindsight.helpers import hindsight_helper
+# Fix import path for hindsight plugin helpers
+# Add /a0 to sys.path so that 'usr.plugins.a0_hindsight' can be resolved
+plugin_base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+if plugin_base not in sys.path:
+    sys.path.insert(0, plugin_base)
 
+from usr.plugins.a0_hindsight.helpers import hindsight_helper
 
 class HindsightRetain(Extension):
 
     async def execute(self, loop_data: LoopData = LoopData(), **kwargs):
+        print("[HINDSIGHT RETAIN] _52_hindsight_retain.execute() called")
         if not self.agent:
+            print("[HINDSIGHT RETAIN] No agent - returning")
             return
 
         context = self.agent.context
         if not hasattr(context, "agent0"):
+            print("[HINDSIGHT RETAIN] No agent0 on context - returning")
             return
         # Check if hindsight_client is available before proceeding
         if not hindsight_helper.is_hindsight_client_available():
+            print("[HINDSIGHT RETAIN] hindsight_client not available - returning")
             return
 
         if not hindsight_helper.is_configured(context):
+            print("[HINDSIGHT RETAIN] Not configured - returning")
             return
 
         config = hindsight_helper._get_plugin_config(self.agent)
+        print(f"[HINDSIGHT RETAIN] Config resolved: base_url={config.get('hindsight_base_url','?')}, retain_enabled={config.get('hindsight_retain_enabled')}")
         if not config.get("hindsight_retain_enabled", True):
+            print("[HINDSIGHT RETAIN] Retain disabled in config - returning")
             return
 
         # Run retention in background to avoid blocking
-        # Using DeferredTask with async function directly (same pattern as cognee retain)
-        DeferredTask(
+        # Create DeferredTask and start the async background task
+        task = DeferredTask()
+        task.start_task(
             self._retain_to_hindsight,
             self.agent,
             context,
             loop_data,
             config,
-            thread_group=THREAD_BACKGROUND,
         )
 
     @staticmethod
