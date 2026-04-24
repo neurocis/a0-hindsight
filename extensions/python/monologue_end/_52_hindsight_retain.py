@@ -73,17 +73,36 @@ class HindsightRetain(Extension):
 
     @staticmethod
     async def _retain_to_hindsight(agent, context, loop_data, config):
-        """Background task: extract knowledge and store in Hindsight."""
+        """Background task: extract knowledge and store in Hindsight.
+        
+        Only processes NEW messages since the last retain cycle to avoid
+        O(N²) token growth and duplicate memories (GitHub #2 Bug 2).
+        """
         try:
             log_item = context.log.log(
                 type="util",
                 heading="Retaining to Hindsight...",
             )
 
+            # Delta tracking: only extract from messages added since last retain
+            if not hasattr(context, '_hindsight'):
+                context._hindsight = {}
+            last_idx = context._hindsight.get('last_retain_idx', 0)
+            
+            # Get only new messages since last retain
+            all_messages = agent.history
+            if last_idx >= len(all_messages):
+                log_item.update(heading="No new messages to retain to Hindsight.")
+                return
+            
+            new_messages = all_messages[last_idx:]
+            if not new_messages:
+                log_item.update(heading="No new messages to retain to Hindsight.")
+                return
+
             # Get the conversation history to extract what should be retained
             system = agent.read_prompt("hindsight.retain_extract.sys.md")
-            msgs_text = agent.concat_messages(agent.history)
-
+            msgs_text = agent.concat_messages(new_messages)
             # Call utility LLM to extract key information from conversation
             memories_json = await agent.call_utility_model(
                 system=system,
@@ -139,9 +158,13 @@ class HindsightRetain(Extension):
                     failed += 1
 
             bank_id = hindsight_helper.get_bank_id(context)
+            
+            # Update delta tracking index after successful retention
+            context._hindsight['last_retain_idx'] = len(all_messages)
+            
             log_item.update(
                 heading=f"Hindsight: {retained} memories retained to bank '{bank_id}'",
-                content=f"Retained: {retained}, Failed: {failed}",
+                content=f"Retained: {retained}, Failed: {failed}, New msgs processed: {len(new_messages)}",
             )
 
         except Exception as e:

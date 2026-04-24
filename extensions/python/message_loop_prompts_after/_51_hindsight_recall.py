@@ -49,7 +49,9 @@ class HindsightRecall(Extension):
         interval = core_config.get("memory_recall_interval", 3)
 
         # Only run on the same iterations as the core recall
+        # Clear stale memories on skip iterations (GitHub #2 Bug 3)
         if loop_data.iteration % interval != 0:
+            loop_data.extras_persistent.pop("hindsight_memories", None)
             return
 
         log_item = self.agent.context.log.log(
@@ -97,6 +99,8 @@ class HindsightRecall(Extension):
                 extras["hindsight_memories"] = hindsight_prompt
             else:
                 log_item.update(heading="No Hindsight memories found")
+                # Clear stale memories when recall finds nothing (GitHub #2 Bug 3)
+                loop_data.extras_persistent.pop("hindsight_memories", None)
 
         except asyncio.TimeoutError:
             log_item.update(heading="Hindsight recall timed out")

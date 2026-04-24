@@ -27,41 +27,16 @@ try:
     from hindsight_client import Hindsight
     HINDSIGHT_AVAILABLE = True
 except ImportError:
-    # Auto-install: if install() hook wasn't called (manual placement),
-    # pip install the dependency so extensions don't silently fail.
-    import subprocess
-    import sys
+    # Do NOT auto-install at module import time — it blocks the main thread
+    # for up to 30s (GitHub #2 Bug 5). Let the init extension handle
+    # installation asynchronously instead.
     import logging as _logging
-    _logger = _logging.getLogger(__name__)
-    _logger.warning(
-        "[Hindsight] hindsight_client not available — attempting auto-install..."
+    _logging.getLogger(__name__).info(
+        "[Hindsight] hindsight_client not available at import time — "
+        "init extension will handle installation if needed."
     )
-    try:
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--quiet", "hindsight-client>=0.4.0"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30,
-        )
-        # Re-import after installation
-        from hindsight_client import Hindsight
-        HINDSIGHT_AVAILABLE = True
-        _logger.info("[Hindsight] hindsight_client auto-installed and loaded successfully.")
-    except subprocess.TimeoutExpired:
-        _logger.error("[Hindsight] Auto-install timed out (>30s)")
-        HINDSIGHT_AVAILABLE = False
-        Hindsight = None  # type: ignore[assignment,misc]
-    except subprocess.CalledProcessError as _e:
-        _logger.error(f"[Hindsight] Auto-install failed: pip returned {_e.returncode}")
-        if _e.stderr:
-            _logger.error(f"[Hindsight] pip stderr: {_e.stderr}")
-        HINDSIGHT_AVAILABLE = False
-        Hindsight = None  # type: ignore[assignment,misc]
-    except Exception as _e:
-        _logger.error(f"[Hindsight] Auto-install error: {_e}")
-        HINDSIGHT_AVAILABLE = False
-        Hindsight = None  # type: ignore[assignment,misc]
+    HINDSIGHT_AVAILABLE = False
+    Hindsight = None  # type: ignore[assignment,misc]
 
 # Module-level caches
 _reflect_cache: Dict[str, tuple] = {}  # bank_id -> (timestamp, content)
@@ -477,7 +452,7 @@ async def reflect_context(context: "AgentContext", query: str) -> Optional[str]:
     bank_id = get_bank_id(context)
 
     # Check cache
-    cache_key = f"{bank_id}:{query[:100]}"
+    cache_key = f"{bank_id}:{getattr(context, 'id', 'default')}"
     cache_ttl = config.get("hindsight_cache_ttl", 120)
     if cache_key in _reflect_cache:
         cached_time, cached_content = _reflect_cache[cache_key]
