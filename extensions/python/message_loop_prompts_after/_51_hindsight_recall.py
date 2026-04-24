@@ -70,9 +70,10 @@ class HindsightRecall(Extension):
             if not query and history:
                 query = history.strip()
             
-            # Truncate query to reasonable size for Hindsight
+            # Truncate query to stay within Hindsight's 500-token query limit
+            # ~1500 chars is safely under 500 tokens for most tokenizers (GitHub #1 Bug 3)
             if query:
-                query = query[:4000]
+                query = query[:1500]
             
             # Validate query is not empty or too short
             if not query or len(query.strip()) < 3:

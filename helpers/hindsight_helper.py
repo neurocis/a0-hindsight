@@ -64,7 +64,6 @@ except ImportError:
         Hindsight = None  # type: ignore[assignment,misc]
 
 # Module-level caches
-_client_cache: Dict[str, Any] = {}
 _reflect_cache: Dict[str, tuple] = {}  # bank_id -> (timestamp, content)
 
 # Default configuration values
@@ -297,7 +296,11 @@ def is_configured(context: Optional["AgentContext"] = None) -> bool:
 
 
 def get_client(context: Optional["AgentContext"] = None) -> Optional[Any]:
-    """Get or create a cached Hindsight client."""
+    """Create a fresh Hindsight client for this call.
+    
+    A new client is created each time to avoid stale aiohttp ClientSession
+    issues across different async contexts or event loops (see GitHub #1).
+    """
     if not HINDSIGHT_AVAILABLE:
         return None
 
@@ -309,16 +312,11 @@ def get_client(context: Optional["AgentContext"] = None) -> Optional[Any]:
 
     api_key = get_api_key(context)
 
-    cache_key = f"{base_url}:{api_key or 'none'}"
-    if cache_key in _client_cache:
-        return _client_cache[cache_key]
-
     try:
         kwargs: Dict[str, Any] = {"base_url": base_url}
         if api_key:
             kwargs["api_key"] = api_key
         client = Hindsight(**kwargs)
-        _client_cache[cache_key] = client
         _log(context, f"Connected to Hindsight at: {base_url}", "util")
         return client
     except Exception as e:
@@ -416,17 +414,21 @@ async def recall_memories(context: "AgentContext", query: str) -> Optional[str]:
     client = get_client(context)
     if not client:
         return None
-
     bank_id = get_bank_id(context)
+
     try:
-        # Validate query before sending
+        # Validate and truncate query before sending
+        # Hindsight service enforces a 500-token query limit.
+        # ~1500 chars is safely under 500 tokens for most tokenizers (GitHub #1 Bug 3).
         if not query or not query.strip():
             _log(context, "Recall query is empty after validation", "debug")
             return None
         
+        safe_query = query.strip()[:1500]
+        
         result = await client.arecall(
             bank_id=bank_id,
-            query=query,
+            query=safe_query,
             max_tokens=config.get("hindsight_recall_max_tokens", 4096),
             budget=config.get("hindsight_recall_budget", "mid"),
         )
@@ -487,9 +489,14 @@ async def reflect_context(context: "AgentContext", query: str) -> Optional[str]:
         return None
 
     try:
+        # Truncate query to stay within Hindsight's 500-token query limit (GitHub #1 Bug 3)
+        safe_query = query.strip()[:1500] if query else ""
+        if not safe_query:
+            return None
+        
         result = await client.areflect(
             bank_id=bank_id,
-            query=query,
+            query=safe_query,
             budget=config.get("hindsight_reflect_budget", "low"),
             max_tokens=config.get("hindsight_reflect_max_tokens", 500),
         )
@@ -532,4 +539,3 @@ def cleanup(context: Optional["AgentContext"] = None) -> None:
         clear_cache(bank_id)
     else:
         clear_cache()
-        _client_cache.clear()
